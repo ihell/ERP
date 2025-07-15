@@ -67,7 +67,7 @@ frontend/
 
 ### 1. Clone repository  
 ```sh
-git clone <repo-url>
+git clone https://github.com/ihell/ERP.git
 cd erp-project
 ```
 
