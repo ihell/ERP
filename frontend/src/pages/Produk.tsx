@@ -29,8 +29,10 @@ interface Produk {
 
 export default function Produk() {
   const [produk, setProduk] = useState<Produk[]>([]);
-  const [nama, setNama] = useState("");
-  const [harga, setHarga] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [produkEdit, setProdukEdit] = useState<Produk | null>(null);
+  const [form, setForm] = useState({ nama: "", harga: "" });
+  const [openDialog, setOpenDialog] = useState(false); // <- kontrol dialog
 
   const fetchProduk = async () => {
     try {
@@ -42,20 +44,41 @@ export default function Produk() {
     }
   };
 
-  const tambahProduk = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await axios.post("http://localhost:3000/api/produk", {
-        nama,
-        harga: Number(harga),
-      });
-      toast.success("Produk berhasil ditambahkan 🎉");
-
-      setNama("");
-      setHarga("");
+      if (editMode && produkEdit) {
+        await axios.put(`http://localhost:3000/api/produk/${produkEdit.id}`, {
+          nama: form.nama,
+          harga: parseInt(form.harga),
+        });
+        toast.success("Produk berhasil diperbarui");
+      } else {
+        await axios.post("http://localhost:3000/api/produk", {
+          nama: form.nama,
+          harga: parseInt(form.harga),
+        });
+        toast.success("Produk berhasil ditambahkan");
+      }
+      setEditMode(false);
+      setProdukEdit(null);
+      setForm({ nama: "", harga: "" });
+      setOpenDialog(false); // tutup dialog setelah submit
       fetchProduk();
-    } catch (err) {
-      console.error("Gagal tambah produk:", err);
-      toast.error("Gagal menambahkan produk 😢");
+    } catch (error) {
+      console.error("❌ Gagal tambah/edit produk:", error);
+      toast.error("Gagal tambah/edit produk");
+    }
+  };
+
+  const handleHapusProduk = async (id: number) => {
+    try {
+      await axios.delete(`http://localhost:3000/api/produk/${id}`);
+      toast.success("Produk berhasil dihapus");
+      fetchProduk();
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal menghapus produk");
     }
   };
 
@@ -67,64 +90,78 @@ export default function Produk() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">📦 Daftar Produk</h1>
-        <Dialog>
+        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
-            <Button>➕ Tambah Produk</Button>
+            <Button
+              onClick={() => {
+                setForm({ nama: "", harga: "" });
+                setEditMode(false);
+                setProdukEdit(null);
+                setOpenDialog(true);
+              }}
+            >
+              ➕ Tambah Produk
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md rounded-2xl shadow-xl border border-gray-200 bg-white">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold text-gray-800">
-                Tambah Produk Baru
+                {editMode ? "Edit Produk" : "Tambah Produk Baru"}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
+            <form onSubmit={handleSubmit} className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="nama" className="text-sm text-gray-600">
-                  Nama Produk
-                </Label>
+                <Label htmlFor="nama">Nama Produk</Label>
                 <Input
                   id="nama"
-                  className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                  placeholder="Contoh: Keyboard Mechanical"
-                  value={nama}
-                  onChange={(e) => setNama(e.target.value)}
+                  value={form.nama}
+                  onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                  placeholder="Contoh: Meja"
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="harga" className="text-sm text-gray-600">
-                  Harga
-                </Label>
+                <Label htmlFor="harga">Harga</Label>
                 <Input
                   id="harga"
                   type="number"
-                  className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                  placeholder="Contoh: 250000"
-                  value={harga}
-                  onChange={(e) => setHarga(e.target.value)}
+                  value={form.harga}
+                  onChange={(e) => setForm({ ...form, harga: e.target.value })}
+                  placeholder="Contoh: 500000"
                 />
               </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                onClick={tambahProduk}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-              >
-                Simpan
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="submit">
+                  {editMode ? "Update" : "Simpan"}
+                </Button>
+                {editMode && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEditMode(false);
+                      setProdukEdit(null);
+                      setForm({ nama: "", harga: "" });
+                      setOpenDialog(false);
+                    }}
+                  >
+                    Batal
+                  </Button>
+                )}
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
+
       <div className="rounded-xl border shadow-sm overflow-x-auto bg-white">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">#</TableHead>
+              <TableHead>#</TableHead>
               <TableHead>Nama Produk</TableHead>
               <TableHead>Harga</TableHead>
+              <TableHead>Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -133,6 +170,29 @@ export default function Produk() {
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>{p.nama}</TableCell>
                 <TableCell>Rp {p.harga.toLocaleString()}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    className="mr-2"
+                    onClick={() => {
+                      setProdukEdit(p);
+                      setEditMode(true);
+                      setForm({
+                        nama: p.nama,
+                        harga: p.harga.toString(),
+                      });
+                      setOpenDialog(true); // <-- ini penting agar dialog terbuka
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    className="bg-red-500 text-white"
+                    onClick={() => handleHapusProduk(p.id)}
+                  >
+                    Hapus
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
