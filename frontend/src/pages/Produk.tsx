@@ -33,6 +33,7 @@ export default function Produk() {
   const [produkEdit, setProdukEdit] = useState<Produk | null>(null);
   const [form, setForm] = useState({ nama: "", harga: "" });
   const [openDialog, setOpenDialog] = useState(false); // <- kontrol dialog
+  const [filter, setFilter] = useState("");
 
   const fetchProduk = async () => {
     try {
@@ -85,6 +86,11 @@ export default function Produk() {
   useEffect(() => {
     fetchProduk();
   }, []);
+
+  // Filter produk sebelum render
+  const filteredProduk = produk.filter((p) =>
+    p.nama.toLowerCase().includes(filter.toLowerCase())
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -154,6 +160,15 @@ export default function Produk() {
         </Dialog>
       </div>
 
+      {/* Tambahkan input filter sebelum tabel */}
+      <Input
+        type="text"
+        placeholder="Cari produk..."
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        className="border p-2 rounded mb-4 w-full max-w-xs"
+      />
+
       <div className="rounded-xl border shadow-sm overflow-x-auto bg-white">
         <Table>
           <TableHeader>
@@ -165,7 +180,7 @@ export default function Produk() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {produk.map((p, idx) => (
+            {filteredProduk.map((p, idx) => (
               <TableRow key={p.id}>
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>{p.nama}</TableCell>
@@ -181,7 +196,7 @@ export default function Produk() {
                         nama: p.nama,
                         harga: p.harga.toString(),
                       });
-                      setOpenDialog(true); // <-- ini penting agar dialog terbuka
+                      setOpenDialog(true);
                     }}
                   >
                     Edit

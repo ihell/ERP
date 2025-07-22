@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors'; 
 import { pool } from './db';
 import produkRoutes from './routes/produk.controller';
+import authRoutes from './routes/auth.routes'; // tambahkan import ini
+import laporanRoutes from './routes/laporan.routes';
 
 const app = express();
 
@@ -30,6 +32,8 @@ app.get('/produk', async (_req, res) => {
 
 // Endpoint tambahan
 app.use('/api/produk', produkRoutes);
+app.use('/auth', authRoutes);
+app.use("/api", laporanRoutes);
 
 app.listen(3000, () => {
   console.log('🚀 Backend running at http://localhost:3000');
